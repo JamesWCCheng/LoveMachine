@@ -40,21 +40,23 @@ std::vector<Range> GetRanges(const std::string &ranges)
 }
 int main()
 {
-	string ranges = "0-512, 513-5566,5567-39980507";
+	string ranges = "0-512, 513-5566,5567-39980550";
 	auto output = GetRanges(ranges);
 	FILE *fp = nullptr;
 	auto err = fopen_s(&fp, "test.mp4", "rb");
 	fseek(fp, 0, SEEK_END);
 	long lSize = ftell(fp);
 	rewind(fp);
-	
+
 	int count = 0;
+	bool isSplitEnd = false;
+	int total = 0;
 	for (auto && r : output)
 	{
 		auto expectReadLen = (r.end - r.start) + 1;
 		char *buffer = new char[expectReadLen];
 		auto realLen = fread(buffer, 1, expectReadLen, fp);
-		
+
 		FILE *fpw = nullptr;
 		stringstream ss;
 		string filename;
@@ -66,13 +68,28 @@ int main()
 		count++;
 		if (realLen < expectReadLen)
 		{
+			isSplitEnd = true;
 			cout << "read end" << endl;
 			break;
 		}
+		total += realLen;
 	}
 
+	if (!isSplitEnd)
+	{
+		int remaining = lSize - total;
+		char *buffer = new char[remaining];
+		auto realLen = fread(buffer, 1, remaining, fp);
+		FILE *fpw = nullptr;
+		stringstream ss;
+		string filename;
+		ss << count << ".bin";
+		ss >> filename;
+		fopen_s(&fpw, filename.c_str(), "wb");
+		fwrite(buffer, 1, realLen, fpw);
+	}
 	fclose(fp);
-		
+
 
 	return 0;
 }
